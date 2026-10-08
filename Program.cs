@@ -14,5 +14,6 @@ var app = builder.Build();
 // app.MapReverseProxy();
 
 app.MapGet("/", () => "Hello World!");
+app.MapGet("/health", () => "Hello World!");
 
 app.Run();
