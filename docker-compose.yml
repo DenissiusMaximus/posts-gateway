@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8081:8080"
+    networks:
+      default:
+        aliases:
+          - gateway
+
+networks:
+  default:
+    name: gateway_default
