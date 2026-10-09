@@ -1,8 +1,10 @@
+# syntax=docker/dockerfile:1.7
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY *.csproj .
-RUN dotnet restore
+RUN --mount=type=cache,id=gateway-nuget,target=/root/.nuget/packages \
+    dotnet restore
 
 COPY . .
 RUN dotnet publish -c Release -o /app --no-restore
