@@ -15,6 +15,7 @@ builder.Services
 
 var app = builder.Build();
 
+
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     app.Logger.LogInformation("Gateway service started successfully. Listening for requests.");
