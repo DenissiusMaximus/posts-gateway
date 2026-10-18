@@ -2,7 +2,7 @@ namespace gateway.Middleware;
 
 using gateway.Services;
 
-public sealed class GatewayMiddleware(RequestDelegate next)
+public sealed class GatewayMiddleware(RequestDelegate next, ILogger<GatewayMiddleware> logger)
 {
     public async Task InvokeAsync(
         HttpContext context,
@@ -18,7 +18,7 @@ public sealed class GatewayMiddleware(RequestDelegate next)
             var decodedToken = jwtValidationService.DecodeToken(token);
             if (decodedToken is not null)
             {
-                Console.WriteLine($"Decoded JWT - Alg: {decodedToken.Header.Alg}, Kid: {decodedToken.Header.Kid}");
+                logger.LogInformation("Decoded JWT - Alg: {Alg}, Kid: {Kid}", decodedToken.Header.Alg, decodedToken.Header.Kid);
             }
 
             var jwks = await jwksService.GetJwksAsync(context.RequestAborted);
@@ -27,20 +27,15 @@ public sealed class GatewayMiddleware(RequestDelegate next)
             if (principal is not null)
             {
                 context.User = principal;
-                Console.WriteLine($"Token signature verified successfully for subject: {principal.FindFirst("sub")?.Value}");
+                logger.LogInformation("Token signature verified successfully for subject: {Subject}", principal.FindFirst("sub")?.Value);
             }
             else
             {
-                Console.WriteLine("Token signature verification failed.");
+                logger.LogWarning("Token signature verification failed.");
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized: Invalid token signature.", context.RequestAborted);
                 return;
             }
-        }
-        else
-        {
-            var jwks = await jwksService.GetJwksAsync(context.RequestAborted);
-            Console.WriteLine($"JWKS Response: {jwks}");
         }
 
         await next(context);

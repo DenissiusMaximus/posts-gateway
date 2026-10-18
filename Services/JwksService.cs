@@ -7,7 +7,7 @@ public sealed class JwksService(HttpClient httpClient, IConfiguration configurat
         var authServiceUrl = configuration.GetValue<string>("AuthServiceUrl")
             ?? throw new InvalidOperationException("AuthServiceUrl is not configured.");
 
-        var requestUri = $"{authServiceUrl.TrimEnd('/')}/.well-known/jwks";
+        var requestUri = $"{authServiceUrl.TrimEnd('/')}/auth/.well-known/jwks";
 
         using var response = await httpClient.GetAsync(requestUri, cancellationToken);
         response.EnsureSuccessStatusCode();
