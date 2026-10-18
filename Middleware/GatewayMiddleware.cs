@@ -1,23 +1,47 @@
 namespace gateway.Middleware;
 
-public sealed class GatewayMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory)
+using gateway.Services;
+
+public sealed class GatewayMiddleware(RequestDelegate next)
 {
-
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(
+        HttpContext context,
+        IJwksService jwksService,
+        IJwtValidationService jwtValidationService)
     {
-        var authServiceUrl = context.RequestServices.GetRequiredService<IConfiguration>().GetValue<string>("AuthServiceUrl");
-        var client = httpClientFactory.CreateClient();
+        var authHeader = context.Request.Headers.Authorization.ToString();
 
-        using var jwks = await client.GetAsync(
-            $"{authServiceUrl}.well-known/jwks",
-            context.RequestAborted);
+        if (!string.IsNullOrWhiteSpace(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            var token = authHeader["Bearer ".Length..].Trim();
 
-        jwks.EnsureSuccessStatusCode();
+            var decodedToken = jwtValidationService.DecodeToken(token);
+            if (decodedToken is not null)
+            {
+                Console.WriteLine($"Decoded JWT - Alg: {decodedToken.Header.Alg}, Kid: {decodedToken.Header.Kid}");
+            }
 
-        var responseBody = await jwks.Content.ReadAsStringAsync(
-            context.RequestAborted);
+            var jwks = await jwksService.GetJwksAsync(context.RequestAborted);
+            var principal = jwtValidationService.ValidateToken(token, jwks);
 
-        Console.WriteLine($"JWKS Response: {responseBody}");
+            if (principal is not null)
+            {
+                context.User = principal;
+                Console.WriteLine($"Token signature verified successfully for subject: {principal.FindFirst("sub")?.Value}");
+            }
+            else
+            {
+                Console.WriteLine("Token signature verification failed.");
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Unauthorized: Invalid token signature.", context.RequestAborted);
+                return;
+            }
+        }
+        else
+        {
+            var jwks = await jwksService.GetJwksAsync(context.RequestAborted);
+            Console.WriteLine($"JWKS Response: {jwks}");
+        }
 
         await next(context);
     }

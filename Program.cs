@@ -1,3 +1,5 @@
+using gateway.Middleware;
+using gateway.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +10,8 @@ builder.Host.UseSerilog((context, loggerConfiguration) =>
         .Enrich.FromLogContext());
 
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<IJwksService, JwksService>();
+builder.Services.AddScoped<IJwtValidationService, JwtValidationService>();
 
 builder.Services
     .AddReverseProxy()
@@ -32,6 +36,8 @@ app.Lifetime.ApplicationStopped.Register(() =>
 });
 
 app.UseSerilogRequestLogging();
+
+app.UseMiddleware<GatewayMiddleware>();
 
 app.MapReverseProxy();
 
