@@ -1,6 +1,11 @@
-using gateway.Middleware;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, loggerConfiguration) =>
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext());
 
 builder.Services.AddHttpClient();
 
@@ -9,8 +14,6 @@ builder.Services
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 var app = builder.Build();
-
-app.Logger.LogInformation("Starting Gateway service [Environment: {Environment}]", app.Environment.EnvironmentName);
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
@@ -27,7 +30,7 @@ app.Lifetime.ApplicationStopped.Register(() =>
     app.Logger.LogInformation("Gateway service has stopped.");
 });
 
-app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseSerilogRequestLogging();
 
 // app.UseMiddleware<GatewayMiddleware>();  
 app.MapReverseProxy();
