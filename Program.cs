@@ -32,7 +32,6 @@ app.Lifetime.ApplicationStopped.Register(() =>
 
 app.UseSerilogRequestLogging();
 
-// app.UseMiddleware<GatewayMiddleware>();  
 app.MapReverseProxy();
 
 app.Run();
